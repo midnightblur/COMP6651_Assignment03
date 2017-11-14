@@ -2,6 +2,7 @@
 #include <fstream>
 #include <map>
 #include <vector>
+#include <iomanip>
 
 using std::string;
 using std::endl;
@@ -11,6 +12,7 @@ void readURLs(const string &filePath, std::map<string, std::vector<string>> &poi
               std::map<string, std::vector<string>> &pointTo);
 void removeR(string &line);
 void writeOutput(const std::map<string, float> &pageRank, const int TEST_CASE);
+void writeReadme(const int TEST_CASE, const float scaling_factor, const int max_iteration);
 
 template<typename T1, typename T2>
 struct higher_second {
@@ -22,13 +24,14 @@ struct higher_second {
 };
 
 int main() {
+    // Configuration
     int test_case = 3;
     float scaling_factor = 0.5;
     int max_iteration = 12;
 
+    // Read input
     std::map<string, std::vector<string>> pointFrom;
     std::map<string, std::vector<string>> pointTo;
-
     readURLs("/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +
                      std::to_string(test_case) + "/links.txt", pointFrom, pointTo);
 
@@ -60,6 +63,7 @@ int main() {
         cout << pair.first << ": " << pair.second << endl;
     }
     writeOutput(pageRank, test_case);
+    writeReadme(test_case, scaling_factor, max_iteration);
 
     return 0;
 }
@@ -152,5 +156,21 @@ void writeOutput(const std::map<string, float> &pageRank, const int TEST_CASE) {
     for (auto &pair : pageRank) {
         outputFile << pair.first << ", " << pair.second << endl;
     }
+    outputFile.close();
+}
+
+void writeReadme(const int TEST_CASE, const float scaling_factor, const int max_iteration) {
+    std::ofstream outputFile;
+    outputFile.open(
+            "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +
+                    std::to_string(TEST_CASE) + "/readme.txt");
+    outputFile << std::fixed;
+    outputFile << "For this test case parametric values used are:" << endl;
+    outputFile << "scaling factor=" << std::setprecision(2) << scaling_factor << endl;
+    outputFile << "maximum iterations=" << max_iteration << endl;
+    outputFile << endl << "Note:" << endl;
+    outputFile << "For experiements to show the effect of the size of the input and the scaling factor on the "
+            "convergence time, check for convergence with tolerance value=1.0e-6. "
+            "If your graph is a large graph set maximum iterations to 100.";
     outputFile.close();
 }

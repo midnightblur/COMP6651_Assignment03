@@ -2,7 +2,6 @@
 #include <fstream>
 #include <map>
 #include <vector>
-#include <utility>
 
 using std::string;
 using std::endl;
@@ -10,8 +9,8 @@ using std::cout;
 
 void readURLs(const string &filePath, std::map<string, std::vector<string>> &pointFrom,
               std::map<string, std::vector<string>> &pointTo);
-
 void removeR(string &line);
+void writeOutput(const std::map<string, float> &pageRank, const int TEST_CASE);
 
 template<typename T1, typename T2>
 struct higher_second {
@@ -23,9 +22,9 @@ struct higher_second {
 };
 
 int main() {
-    int test_case = 1;
-    float scaling_factor = 0.85;
-    int max_iteration = 20;
+    int test_case = 3;
+    float scaling_factor = 0.5;
+    int max_iteration = 12;
 
     std::map<string, std::vector<string>> pointFrom;
     std::map<string, std::vector<string>> pointTo;
@@ -60,6 +59,7 @@ int main() {
     for (auto &pair : resultVector) {
         cout << pair.first << ": " << pair.second << endl;
     }
+    writeOutput(pageRank, test_case);
 
     return 0;
 }
@@ -142,4 +142,15 @@ void readURLs(const string &filePath, std::map<string, std::vector<string>> &poi
 void removeR(string &line) {
     if (!line.empty() && line.at(line.size() - 1) == '\r')
         line.erase(line.size() - 1);
+}
+
+void writeOutput(const std::map<string, float> &pageRank, const int TEST_CASE) {
+    std::ofstream outputFile;
+    outputFile.open(
+            "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +
+                    std::to_string(TEST_CASE) + "/Output.txt");
+    for (auto &pair : pageRank) {
+        outputFile << pair.first << ", " << pair.second << endl;
+    }
+    outputFile.close();
 }

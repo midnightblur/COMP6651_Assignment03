@@ -11,7 +11,7 @@ using std::cout;
 void readURLs(const string &filePath, std::map<string, std::vector<string>> &pointFrom,
               std::map<string, std::vector<string>> &pointTo);
 void removeR(string &line);
-void writeOutput(const std::map<string, float> &pageRank, const int TEST_CASE);
+void writeOutput(const std::vector<std::pair<string, float>> &pageRank, const int TEST_CASE);
 void writeReadme(const int TEST_CASE, const float scaling_factor, const int max_iteration);
 
 template<typename T1, typename T2>
@@ -62,7 +62,7 @@ int main() {
     for (auto &pair : resultVector) {
         cout << pair.first << ": " << pair.second << endl;
     }
-    writeOutput(pageRank, test_case);
+    writeOutput(resultVector, test_case);
     writeReadme(test_case, scaling_factor, max_iteration);
 
     return 0;
@@ -148,7 +148,7 @@ void removeR(string &line) {
         line.erase(line.size() - 1);
 }
 
-void writeOutput(const std::map<string, float> &pageRank, const int TEST_CASE) {
+void writeOutput(const std::vector<std::pair<string, float>> &pageRank, const int TEST_CASE) {
     std::ofstream outputFile;
     outputFile.open(
             "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +

@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include <iomanip>
+#include <cmath>
 
 using std::string;
 using std::endl;
@@ -11,8 +12,8 @@ using std::cout;
 void readURLs(const string &filePath, std::map<string, std::vector<string>> &pointFrom,
               std::map<string, std::vector<string>> &pointTo);
 void removeR(string &line);
-void writeOutput(const std::vector<std::pair<string, float>> &pageRank, const int TEST_CASE);
-void writeReadme(const int TEST_CASE, const float scaling_factor, const int max_iteration);
+void writeOutput(const std::map<string, double> &pageRank, const int TEST_CASE);
+void writeReadme(const int TEST_CASE, const double scaling_factor, const int max_iteration);
 
 template<typename T1, typename T2>
 struct higher_second {
@@ -25,9 +26,10 @@ struct higher_second {
 
 int main() {
     // Configuration
-    int test_case = 3;
-    float scaling_factor = 0.5;
-    int max_iteration = 12;
+    int test_case = 1;
+    double scaling_factor = 0.85;
+    int max_iteration = 30;
+    double tolerance_value = 0.000001;
 
     // Read input
     std::map<string, std::vector<string>> pointFrom;
@@ -36,33 +38,47 @@ int main() {
                      std::to_string(test_case) + "/links.txt", pointFrom, pointTo);
 
     // Init page rank to 1 for all URLs
-    std::map<string, float> pageRank;
+    std::map<string, double> pageRank;
     for (auto &url : pointTo) {
         pageRank.insert(std::make_pair(url.first, 1));
     }
 
     // Calculate PageRank for all URLs
+    clock_t clock_1 = clock();
     for (int i = 0; i < max_iteration; i++) {
-        std::map<string, float> tmpPageRank;
+        std::map<string, double> tmpPageRank;
         for (auto currentURL = pointTo.begin(); currentURL != pointTo.end(); currentURL++) {
-            float currentPageRank = 1 - scaling_factor;
+            double currentPageRank = 1 - scaling_factor;
             for (auto &source : currentURL->second) {
-                float pageRankDestination = pageRank.find(source)->second;
+                double pageRankDestination = pageRank.find(source)->second;
                 size_t outboundLinksDestination = pointFrom.find(source)->second.size();
                 currentPageRank += scaling_factor * pageRankDestination / outboundLinksDestination;
             }
             tmpPageRank.insert(std::make_pair(currentURL->first, currentPageRank));
         }
-        pageRank = tmpPageRank;
+
+        // Check for convergence
+        bool isConverged = true;
+        for (auto &pair : pageRank) {
+            if (fabs(pair.second - tmpPageRank.find(pair.first)->second) > tolerance_value) {
+                isConverged = false;
+                break;
+            }
+        }
+        if (isConverged) {
+            clock_t clock_2 = clock();
+            double dict_diff((double) clock_2 - (double) clock_1);
+            cout << "Converge time = " << dict_diff / (CLOCKS_PER_SEC / 1000) << " ms" << endl;
+            cout << "Iteration no " << i + 1 << endl;
+            break;
+        } else {
+            pageRank = tmpPageRank;
+        }
     }
 
     // Sort the result based on PageRank value
-    std::vector<std::pair<string, float>> resultVector(pageRank.begin(), pageRank.end());
-    sort(resultVector.begin(), resultVector.end(), higher_second<string, float>());
-    for (auto &pair : resultVector) {
-        cout << pair.first << ": " << pair.second << endl;
-    }
-    writeOutput(resultVector, test_case);
+
+    writeOutput(pageRank, test_case);
     writeReadme(test_case, scaling_factor, max_iteration);
 
     return 0;
@@ -148,18 +164,22 @@ void removeR(string &line) {
         line.erase(line.size() - 1);
 }
 
-void writeOutput(const std::vector<std::pair<string, float>> &pageRank, const int TEST_CASE) {
+void writeOutput(const std::map<string, double> &pageRank, const int TEST_CASE) {
+    std::vector<std::pair<string, double>> resultVector(pageRank.begin(), pageRank.end());
+    sort(resultVector.begin(), resultVector.end(), higher_second<string, double>());
+
     std::ofstream outputFile;
     outputFile.open(
             "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +
                     std::to_string(TEST_CASE) + "/Output.txt");
-    for (auto &pair : pageRank) {
+    for (auto &pair : resultVector) {
+        cout << pair.first << ": " << pair.second << endl;
         outputFile << pair.first << ", " << pair.second << endl;
     }
     outputFile.close();
 }
 
-void writeReadme(const int TEST_CASE, const float scaling_factor, const int max_iteration) {
+void writeReadme(const int TEST_CASE, const double scaling_factor, const int max_iteration) {
     std::ofstream outputFile;
     outputFile.open(
             "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +

@@ -39,17 +39,17 @@ struct higher_second {
 
 int main() {
     // Configuration
-    const int TEST_CASE = 3;
+    const int TEST_CASE = 8;
     const double SCALING_FACTOR = 0.85;
     const int MAX_ITERATION = 100;
     const double TOLERANCE_VALUE = 0.000001;
 
     // Generate input graph
-    std::vector<double> densityList {0.05};
-    generateGraph(50, densityList);
+//    std::vector<double> densityList {0.05};
+//    generateGraph(300, densityList);
 
     // Execute PageRank algorithm
-//    execPageRankAlgo(TEST_CASE, MAX_ITERATION, SCALING_FACTOR, TOLERANCE_VALUE);
+    execPageRankAlgo(TEST_CASE, MAX_ITERATION, SCALING_FACTOR, TOLERANCE_VALUE);
 
     return 0;
 }
@@ -58,8 +58,14 @@ void execPageRankAlgo(int TEST_CASE, int MAX_ITERATION, double SCALING_FACTOR, d
     // Read input
     std::map<string, std::vector<string>> pointFrom;
     std::map<string, std::vector<string>> pointTo;
+    clock_t clock_1 = clock();
     readURLs("/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +
                      std::to_string(TEST_CASE) + "/links.txt", pointFrom, pointTo);
+    clock_t clock_2 = clock();
+    double dict_diff((double) clock_2 - (double) clock_1);
+//    cout << "Reading input = " << dict_diff / (CLOCKS_PER_SEC / 1000) << " ms" << endl;
+    cout << dict_diff / (CLOCKS_PER_SEC / 1000) << endl;
+
 
     // Init page rank to 1 for all URLs
     std::map<string, double> pageRank;
@@ -68,7 +74,7 @@ void execPageRankAlgo(int TEST_CASE, int MAX_ITERATION, double SCALING_FACTOR, d
     }
 
     // Calculate PageRank for all URLs
-    clock_t clock_1 = clock();
+    clock_1 = clock();
     for (int i = 0; i < MAX_ITERATION; i++) {
         std::map<string, double> tmpPageRank;
         for (auto currentURL = pointTo.begin(); currentURL != pointTo.end(); currentURL++) {
@@ -90,9 +96,10 @@ void execPageRankAlgo(int TEST_CASE, int MAX_ITERATION, double SCALING_FACTOR, d
             }
         }
         if (isConverged) {
-            clock_t clock_2 = clock();
-            double dict_diff((double) clock_2 - (double) clock_1);
-            cout << "Converge time = " << dict_diff / (CLOCKS_PER_SEC / 1000) << " ms" << endl;
+            clock_2 = clock();
+            dict_diff = (double) clock_2 - (double) clock_1;
+//            cout << "Converge time = " << dict_diff / (CLOCKS_PER_SEC / 1000) << " ms" << endl;
+            cout << dict_diff / (CLOCKS_PER_SEC / 1000) << endl;
             cout << "Iteration no " << i + 1 << endl;
             break;
         } else {

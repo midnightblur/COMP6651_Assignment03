@@ -20,7 +20,11 @@ void writeOutput(const std::map<string, double> &pageRank, int TEST_CASE);
 
 void writeReadme(int TEST_CASE, double scaling_factor, int max_iteration);
 
-void generateGraph(int TEST_CASE, int nodesCount, float density);
+void generateGraph(int nodesCount, std::vector<double> densityList);
+
+void deleteEdgesToDensity(const double density, const int nodesCount, int &currentEdgesCount, std::map<string, std::vector<string>> &graph);
+
+void writeGraph(int nodesCount, int edgesCount, std::map<string, std::vector<string>> graph);
 
 unsigned long getRandomNumber(unsigned long max, unsigned long min);
 
@@ -37,10 +41,14 @@ int main() {
     // Configuration
     const int TEST_CASE = 3;
     const double SCALING_FACTOR = 0.85;
-    const int MAX_ITERATION = 30;
+    const int MAX_ITERATION = 100;
     const double TOLERANCE_VALUE = 0.000001;
 
-    generateGraph(TEST_CASE, 100, 0.05);
+    // Generate input graph
+    std::vector<double> densityList {0.05};
+    generateGraph(50, densityList);
+
+    // Execute PageRank algorithm
 //    execPageRankAlgo(TEST_CASE, MAX_ITERATION, SCALING_FACTOR, TOLERANCE_VALUE);
 
     return 0;
@@ -209,12 +217,8 @@ void writeReadme(const int TEST_CASE, const double scaling_factor, const int max
     outputFile.close();
 }
 
-void generateGraph(int TEST_CASE, int nodesCount, float density) {
-    int maxEdgesCount = nodesCount * (nodesCount - 1);
-    auto edgesCount = static_cast<int>(maxEdgesCount * density);
-    cout << "No of Nodes = " << nodesCount << endl;
-    cout << "No of Edges = " << edgesCount << endl;
-    cout << "Graph density = " << density << endl;
+void generateGraph(int nodesCount, std::vector<double> densityList) {
+    int currentEdgesCount = nodesCount * (nodesCount - 1);
 
     // Generate nodes
     std::map<string, std::vector<string>> graph;
@@ -225,17 +229,23 @@ void generateGraph(int TEST_CASE, int nodesCount, float density) {
 
     // Make a fully connected graph
     for (auto &sourceNode : graph) {
-        std::vector<string> desitnationURLs = sourceNode.second;
         for (auto &targetNode : graph) {
             if (targetNode != sourceNode) {
-                desitnationURLs.insert(desitnationURLs.end(), targetNode.first);
+                sourceNode.second.insert(sourceNode.second.end(), targetNode.first);
             }
         }
-        sourceNode.second = desitnationURLs;
     }
 
     // Delete edges to reach desired density
-    while (maxEdgesCount > edgesCount) {
+    for (auto &density : densityList) {
+        deleteEdgesToDensity(density, nodesCount, currentEdgesCount, graph);
+    }
+}
+
+void deleteEdgesToDensity(const double density, const int nodesCount, int &currentEdgesCount, std::map<string, std::vector<string>> &graph) {
+    int maxEdgesCount = nodesCount * (nodesCount - 1);
+    auto targetEdgesCount = static_cast<int>(maxEdgesCount * density);
+    while (currentEdgesCount > targetEdgesCount) {
         // Pick a random sourceNode
         auto sourceNodeIter = graph.begin();
         std::advance(sourceNodeIter, getRandomNumber(graph.size() - 1, 0));
@@ -246,15 +256,20 @@ void generateGraph(int TEST_CASE, int nodesCount, float density) {
             std::advance(targetNodeIter, getRandomNumber(sourceNodeIter->second.size() - 1, 0));
 
             sourceNodeIter->second.erase(targetNodeIter);
-            maxEdgesCount--;
+            currentEdgesCount--;
         }
     }
 
     // Write graph to file
+    writeGraph(nodesCount, targetEdgesCount, graph);
+}
+
+void writeGraph(int nodesCount, int edgesCount, std::map<string, std::vector<string>> graph) {
+    double density = (double) edgesCount / (nodesCount * (nodesCount - 1));
     std::ofstream outputFile;
     outputFile.open(
-            "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +
-                    std::to_string(TEST_CASE) + "/links.txt");
+            "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/generatedGraphs/"
+                    "n" + std::to_string(nodesCount) + "-e" + std::to_string(edgesCount) + "-d" + std::to_string(density) + ".txt");
 
     for (auto &sourceNode : graph) {
         for (auto &targetNode : sourceNode.second) {
@@ -263,6 +278,10 @@ void generateGraph(int TEST_CASE, int nodesCount, float density) {
     }
 
     outputFile.close();
+
+    cout << "No of Nodes = " << nodesCount << endl;
+    cout << "No of Edges = " << edgesCount << endl;
+    cout << "Graph density = " << density << endl;
 }
 
 unsigned long getRandomNumber(unsigned long max, unsigned long min) {

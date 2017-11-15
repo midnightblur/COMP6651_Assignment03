@@ -9,11 +9,20 @@ using std::string;
 using std::endl;
 using std::cout;
 
+void execPageRankAlgo(int TEST_CASE, int MAX_ITERATION, double SCALING_FACTOR, double TOLERANCE_VALUE);
+
 void readURLs(const string &filePath, std::map<string, std::vector<string>> &pointFrom,
               std::map<string, std::vector<string>> &pointTo);
+
 void removeR(string &line);
-void writeOutput(const std::map<string, double> &pageRank, const int TEST_CASE);
-void writeReadme(const int TEST_CASE, const double scaling_factor, const int max_iteration);
+
+void writeOutput(const std::map<string, double> &pageRank, int TEST_CASE);
+
+void writeReadme(int TEST_CASE, double scaling_factor, int max_iteration);
+
+void generateGraph(int TEST_CASE, int nodesCount, float density);
+
+unsigned long getRandomNumber(unsigned long max, unsigned long min);
 
 template<typename T1, typename T2>
 struct higher_second {
@@ -26,16 +35,23 @@ struct higher_second {
 
 int main() {
     // Configuration
-    int test_case = 1;
-    double scaling_factor = 0.85;
-    int max_iteration = 30;
-    double tolerance_value = 0.000001;
+    const int TEST_CASE = 3;
+    const double SCALING_FACTOR = 0.85;
+    const int MAX_ITERATION = 30;
+    const double TOLERANCE_VALUE = 0.000001;
 
+    generateGraph(TEST_CASE, 100, 0.05);
+//    execPageRankAlgo(TEST_CASE, MAX_ITERATION, SCALING_FACTOR, TOLERANCE_VALUE);
+
+    return 0;
+}
+
+void execPageRankAlgo(int TEST_CASE, int MAX_ITERATION, double SCALING_FACTOR, double TOLERANCE_VALUE) {
     // Read input
     std::map<string, std::vector<string>> pointFrom;
     std::map<string, std::vector<string>> pointTo;
     readURLs("/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +
-                     std::to_string(test_case) + "/links.txt", pointFrom, pointTo);
+                     std::to_string(TEST_CASE) + "/links.txt", pointFrom, pointTo);
 
     // Init page rank to 1 for all URLs
     std::map<string, double> pageRank;
@@ -45,14 +61,14 @@ int main() {
 
     // Calculate PageRank for all URLs
     clock_t clock_1 = clock();
-    for (int i = 0; i < max_iteration; i++) {
+    for (int i = 0; i < MAX_ITERATION; i++) {
         std::map<string, double> tmpPageRank;
         for (auto currentURL = pointTo.begin(); currentURL != pointTo.end(); currentURL++) {
-            double currentPageRank = 1 - scaling_factor;
+            double currentPageRank = 1 - SCALING_FACTOR;
             for (auto &source : currentURL->second) {
                 double pageRankDestination = pageRank.find(source)->second;
                 size_t outboundLinksDestination = pointFrom.find(source)->second.size();
-                currentPageRank += scaling_factor * pageRankDestination / outboundLinksDestination;
+                currentPageRank += SCALING_FACTOR * pageRankDestination / outboundLinksDestination;
             }
             tmpPageRank.insert(std::make_pair(currentURL->first, currentPageRank));
         }
@@ -60,7 +76,7 @@ int main() {
         // Check for convergence
         bool isConverged = true;
         for (auto &pair : pageRank) {
-            if (fabs(pair.second - tmpPageRank.find(pair.first)->second) > tolerance_value) {
+            if (fabs(pair.second - tmpPageRank.find(pair.first)->second) > TOLERANCE_VALUE) {
                 isConverged = false;
                 break;
             }
@@ -78,10 +94,8 @@ int main() {
 
     // Sort the result based on PageRank value
 
-    writeOutput(pageRank, test_case);
-    writeReadme(test_case, scaling_factor, max_iteration);
-
-    return 0;
+    writeOutput(pageRank, TEST_CASE);
+    writeReadme(TEST_CASE, SCALING_FACTOR, MAX_ITERATION);
 }
 
 void readURLs(const string &filePath, std::map<string, std::vector<string>> &pointFrom,
@@ -193,4 +207,67 @@ void writeReadme(const int TEST_CASE, const double scaling_factor, const int max
             "convergence time, check for convergence with tolerance value=1.0e-6. "
             "If your graph is a large graph set maximum iterations to 100.";
     outputFile.close();
+}
+
+void generateGraph(int TEST_CASE, int nodesCount, float density) {
+    int maxEdgesCount = nodesCount * (nodesCount - 1);
+    auto edgesCount = static_cast<int>(maxEdgesCount * density);
+    cout << "No of Nodes = " << nodesCount << endl;
+    cout << "No of Edges = " << edgesCount << endl;
+    cout << "Graph density = " << density << endl;
+
+    // Generate nodes
+    std::map<string, std::vector<string>> graph;
+    for (int i = 1; i <= nodesCount; i++) {
+        std::vector<string> destinationURLs;
+        graph.insert(std::make_pair(std::to_string(i), destinationURLs));
+    }
+
+    // Make a fully connected graph
+    for (auto &sourceNode : graph) {
+        std::vector<string> desitnationURLs = sourceNode.second;
+        for (auto &targetNode : graph) {
+            if (targetNode != sourceNode) {
+                desitnationURLs.insert(desitnationURLs.end(), targetNode.first);
+            }
+        }
+        sourceNode.second = desitnationURLs;
+    }
+
+    // Delete edges to reach desired density
+    while (maxEdgesCount > edgesCount) {
+        // Pick a random sourceNode
+        auto sourceNodeIter = graph.begin();
+        std::advance(sourceNodeIter, getRandomNumber(graph.size() - 1, 0));
+
+        if (sourceNodeIter->second.size() > 1) { // keep at least 1 edge so the graph is still a connected one
+            // Pick a random targetNode to remove the edge
+            auto targetNodeIter = sourceNodeIter->second.begin();
+            std::advance(targetNodeIter, getRandomNumber(sourceNodeIter->second.size() - 1, 0));
+
+            sourceNodeIter->second.erase(targetNodeIter);
+            maxEdgesCount--;
+        }
+    }
+
+    // Write graph to file
+    std::ofstream outputFile;
+    outputFile.open(
+            "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +
+                    std::to_string(TEST_CASE) + "/links.txt");
+
+    for (auto &sourceNode : graph) {
+        for (auto &targetNode : sourceNode.second) {
+            outputFile << sourceNode.first << ", " << targetNode << endl;
+        }
+    }
+
+    outputFile.close();
+}
+
+unsigned long getRandomNumber(unsigned long max, unsigned long min) {
+    struct timespec ts{};
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    srand(static_cast<unsigned int>((time_t) ts.tv_nsec));
+    return rand() % (max - min + 1) + min;
 }

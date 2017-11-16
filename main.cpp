@@ -10,24 +10,21 @@ using std::endl;
 using std::cout;
 
 void execPageRankAlgo(int TEST_CASE, int MAX_ITERATION, double SCALING_FACTOR, double TOLERANCE_VALUE);
-
 void readURLs(const string &filePath, std::map<string, std::vector<string>> &pointFrom,
               std::map<string, std::vector<string>> &pointTo);
-
 void removeR(string &line);
-
 void writeOutput(const std::map<string, double> &pageRank, int TEST_CASE);
-
 void writeReadme(int TEST_CASE, double scaling_factor, int max_iteration);
-
-void generateGraph(int nodesCount, std::vector<double> densityList);
-
-void deleteEdgesToDensity(const double density, const int nodesCount, int &currentEdgesCount, std::map<string, std::vector<string>> &graph);
-
-void writeGraph(int nodesCount, int edgesCount, std::map<string, std::vector<string>> graph);
-
+void generateEdgarGilbertModelByDensity(int nodesCount, std::vector<double> densityList);
+void generateEdgarGilbertModelByNodesCount(std::vector<int> nodesCountList, double density);
+void generateStochasticBlockModel(std::vector<int> communitiesSize, double withinCommunitiesDensity);
+void deleteNodes(int desiredNodesCount, int &currentNodesCount, int &currentEdgesCount,
+                 std::map<string, std::vector<string>> &graph);
+void deleteEdgesToDensity(double density, int nodesCount, int &currentEdgesCount,
+                          std::map<string, std::vector<string>> &graph);
+void writeGraph(int nodesCount, int edgesCount, const std::map<string, std::vector<string>> &graph);
 unsigned long getRandomNumber(unsigned long max, unsigned long min);
-
+void setupRandomSeed();
 template<typename T1, typename T2>
 struct higher_second {
     typedef std::pair<T1, T2> type;
@@ -38,17 +35,26 @@ struct higher_second {
 };
 
 int main() {
-    // Configuration
-    const int TEST_CASE = 8;
+    setupRandomSeed();
+    // Generate Edgar Gilbert Model graph
+//    std::vector<int> nodesCountList {170};
+//    double density = 0.093039;
+//    generateEdgarGilbertModelByNodesCount(nodesCountList, density);
+
+//    int nodesCount = 1000;
+//    std::vector<double> densityList{0.9, 0.7, 0.5, 0.3, 0.1, 0.05};
+//    generateEdgarGilbertModelByDensity(nodesCount, densityList);
+
+    // Generate Stochastic Block Model graph
+//    std::vector<int> communitiesSize {10, 12, 15, 15, 18, 20, 30, 50};
+//    double communitiesDensity = 0.5;
+//    generateStochasticBlockModel(communitiesSize, communitiesDensity);
+
+    // Execute PageRank algorithm
+    const int TEST_CASE = 28;
     const double SCALING_FACTOR = 0.85;
     const int MAX_ITERATION = 100;
     const double TOLERANCE_VALUE = 0.000001;
-
-    // Generate input graph
-//    std::vector<double> densityList {0.05};
-//    generateGraph(300, densityList);
-
-    // Execute PageRank algorithm
     execPageRankAlgo(TEST_CASE, MAX_ITERATION, SCALING_FACTOR, TOLERANCE_VALUE);
 
     return 0;
@@ -131,11 +137,11 @@ void readURLs(const string &filePath, std::map<string, std::vector<string>> &poi
         auto fromURL2 = pointFrom.find(url2);
         if (fromURL1 == pointFrom.end()) {
             std::vector<string> destination;
-            destination.insert(destination.end(), url2);
+            destination.push_back(url2);
             pointFrom.insert(std::make_pair(url1, destination));
         } else {
             std::vector<string> destination = fromURL1->second;
-            destination.insert(destination.end(), url2);
+            destination.push_back(url2);
             pointFrom.erase(fromURL1);
             pointFrom.insert(std::make_pair(url1, destination));
         }
@@ -151,11 +157,11 @@ void readURLs(const string &filePath, std::map<string, std::vector<string>> &poi
         auto toURL2 = pointTo.find(url2);
         if (toURL2 == pointTo.end()) {
             std::vector<string> destination;
-            destination.insert(destination.end(), url1);
+            destination.push_back(url1);
             pointTo.insert(std::make_pair(url2, destination));
         } else {
             std::vector<string> destination = toURL2->second;
-            destination.insert(destination.end(), url1);
+            destination.push_back(url1);
             pointTo.erase(toURL2);
             pointTo.insert(std::make_pair(url2, destination));
         }
@@ -202,7 +208,7 @@ void writeOutput(const std::map<string, double> &pageRank, const int TEST_CASE) 
             "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/test case " +
                     std::to_string(TEST_CASE) + "/Output.txt");
     for (auto &pair : resultVector) {
-        cout << pair.first << ": " << pair.second << endl;
+//        cout << pair.first << ": " << pair.second << endl;
         outputFile << pair.first << ", " << pair.second << endl;
     }
     outputFile.close();
@@ -224,7 +230,7 @@ void writeReadme(const int TEST_CASE, const double scaling_factor, const int max
     outputFile.close();
 }
 
-void generateGraph(int nodesCount, std::vector<double> densityList) {
+void generateEdgarGilbertModelByDensity(int nodesCount, std::vector<double> densityList) {
     int currentEdgesCount = nodesCount * (nodesCount - 1);
 
     // Generate nodes
@@ -238,18 +244,166 @@ void generateGraph(int nodesCount, std::vector<double> densityList) {
     for (auto &sourceNode : graph) {
         for (auto &targetNode : graph) {
             if (targetNode != sourceNode) {
-                sourceNode.second.insert(sourceNode.second.end(), targetNode.first);
+                sourceNode.second.push_back(targetNode.first);
             }
         }
     }
 
     // Delete edges to reach desired density
     for (auto &density : densityList) {
+        cout << endl << "New Erdos Renyi Model" << endl;
         deleteEdgesToDensity(density, nodesCount, currentEdgesCount, graph);
+        writeGraph(nodesCount, currentEdgesCount, graph);
     }
 }
 
-void deleteEdgesToDensity(const double density, const int nodesCount, int &currentEdgesCount, std::map<string, std::vector<string>> &graph) {
+void generateEdgarGilbertModelByNodesCount(std::vector<int> nodesCountList, double density) {
+    int currentNodesCount = nodesCountList.front();
+    int currentEdgesCount = currentNodesCount * (currentNodesCount - 1);
+
+    // Generate nodes
+    std::map<string, std::vector<string>> graph;
+    for (int i = 1; i <= currentNodesCount; i++) {
+        std::vector<string> destinationURLs;
+        graph.insert(std::make_pair(std::to_string(i), destinationURLs));
+    }
+
+    // Make a fully connected graph
+    for (auto &sourceNode : graph) {
+        for (auto &targetNode : graph) {
+            if (targetNode != sourceNode) {
+                sourceNode.second.push_back(targetNode.first);
+            }
+        }
+    }
+
+    // Delete edges to reach desired density
+    deleteEdgesToDensity(density, currentNodesCount, currentEdgesCount, graph);
+
+    // Delete nodes to reach desired number of nodes
+    for (auto &nodeCount : nodesCountList) {
+        cout << endl << "New Erdos Renyi Model" << endl;
+        deleteNodes(nodeCount, currentNodesCount, currentEdgesCount, graph);
+        writeGraph(currentNodesCount, currentEdgesCount, graph);
+    }
+}
+
+void generateStochasticBlockModel(std::vector<int> communitiesSize, double withinCommunitiesDensity) {
+    cout << endl << "New Stochastic Block Model" << endl;
+    // Init communities and their members
+    int nodesCount = 0;
+    for (auto size : communitiesSize) {
+        nodesCount += size;
+    }
+
+    int edgesCount = 0;
+    std::map<string, std::vector<string>> communitiesMap;
+    std::map<string, std::vector<string>> graph;
+    for (int i = 1; i <= communitiesSize.size(); i++) {
+        int size = communitiesSize.at(static_cast<unsigned long>(i - 1));
+        string communityID = std::to_string(i);
+        std::vector<string> communityMemberVector;
+        for (int j = 0; j < size; j++) {
+            string nodeID = communityID + "-" + std::to_string(j);
+            communityMemberVector.push_back(nodeID);
+
+            std::vector<string> destinationNodes;
+            graph.insert(std::make_pair(nodeID, destinationNodes));
+        }
+        communitiesMap.insert(std::make_pair(communityID, communityMemberVector));
+    }
+
+    // Make all communities fully connected
+    for (auto &community : communitiesMap) {
+        for (auto &sourceNode : community.second) {
+            for (auto &targetNode : community.second) {
+                if (targetNode != sourceNode) {
+                    graph.find(sourceNode)->second.push_back(targetNode);
+                }
+            }
+        }
+    }
+
+    // Make all communities reach desired density by removing arbitrary edges within communities
+    for (auto &community : communitiesMap) {
+        int size = static_cast<int>(community.second.size());
+        int currentCommunityEdgesCount = size * (size - 1);
+        auto desiredCommunityEdgesCount = static_cast<int>(currentCommunityEdgesCount * withinCommunitiesDensity);
+        while (currentCommunityEdgesCount > desiredCommunityEdgesCount) {
+            // Pick a random sourceNode in the community
+            auto sourceNodeIter = community.second.begin();
+            std::advance(sourceNodeIter, getRandomNumber(community.second.size() - 1, 0));
+
+            // Pick a random targetNode and remove the edge
+            std::vector<string> &targetNodes = graph.find(*sourceNodeIter)->second;
+            if (targetNodes.size() > 1) { // Only delete the edge if there're more than 1 edge coming from sourceNode
+                auto targetNodeIter = targetNodes.begin();
+                std::advance(targetNodeIter, getRandomNumber(targetNodes.size() - 1, 0));
+                targetNodes.erase(targetNodeIter);
+
+                currentCommunityEdgesCount--;
+            }
+        }
+        edgesCount += desiredCommunityEdgesCount;
+    }
+
+    // Create some arbitrary edges between communities
+    for (auto &sourceCommunity : communitiesMap) {
+        for (auto &targetCommunity : communitiesMap) {
+            if (sourceCommunity != targetCommunity) {
+                auto noOfNewEdges = static_cast<int>(getRandomNumber(sourceCommunity.second.size() / 2, 1));
+                for (int i = 0; i < noOfNewEdges; i++) {
+                    // Pick a random sourceNode from sourceCommunity
+                    auto sourceNodeIter = sourceCommunity.second.begin();
+                    std::advance(sourceNodeIter, getRandomNumber(sourceCommunity.second.size() - 1, 0));
+
+                    // Pick a random targetNode from targetCommunity
+                    auto targetNodeIter = targetCommunity.second.begin();
+                    std::advance(targetNodeIter, getRandomNumber(targetCommunity.second.size() - 1, 0));
+
+                    // Create new edge between them
+                    auto &destinationNodes = graph.find(*sourceNodeIter)->second;
+                    if (std::find(destinationNodes.begin(), destinationNodes.end(), *targetNodeIter) == destinationNodes.end()) {
+                        destinationNodes.push_back(*targetNodeIter);
+                        edgesCount++;
+                    }
+                }
+            }
+        }
+    }
+
+    // Write the graph to file
+    writeGraph(nodesCount, edgesCount, graph);
+}
+
+void deleteNodes(int desiredNodesCount, int &currentNodesCount, int &currentEdgesCount,
+                 std::map<string, std::vector<string>> &graph) {
+    while (currentNodesCount > desiredNodesCount) {
+        // Pick a random node
+        auto nodeIter = graph.begin();
+        std::advance(nodeIter, getRandomNumber(graph.size() - 1, 0));
+
+        // Delete the node and all edges coming from it
+        string node = nodeIter->first;
+        currentEdgesCount -= nodeIter->second.size();
+        graph.erase(nodeIter);
+
+        // Delete all edges coming to it
+        for (auto &sourceNode : graph) {
+            for (auto targetIter = sourceNode.second.begin(); targetIter != sourceNode.second.end(); targetIter++) {
+                if (*targetIter == node) {
+                    sourceNode.second.erase(targetIter);
+                    currentEdgesCount--;
+                    break;
+                }
+            }
+        }
+        currentNodesCount--;
+    }
+}
+
+void deleteEdgesToDensity(double density, int nodesCount, int &currentEdgesCount,
+                          std::map<string, std::vector<string>> &graph) {
     int maxEdgesCount = nodesCount * (nodesCount - 1);
     auto targetEdgesCount = static_cast<int>(maxEdgesCount * density);
     while (currentEdgesCount > targetEdgesCount) {
@@ -266,17 +420,15 @@ void deleteEdgesToDensity(const double density, const int nodesCount, int &curre
             currentEdgesCount--;
         }
     }
-
-    // Write graph to file
-    writeGraph(nodesCount, targetEdgesCount, graph);
 }
 
-void writeGraph(int nodesCount, int edgesCount, std::map<string, std::vector<string>> graph) {
+void writeGraph(int nodesCount, int edgesCount, const std::map<string, std::vector<string>> &graph) {
     double density = (double) edgesCount / (nodesCount * (nodesCount - 1));
     std::ofstream outputFile;
     outputFile.open(
             "/Users/midnightblur/Documents/workspace/CLionProjects/COMP6651_Assignment03/test cases/generatedGraphs/"
-                    "n" + std::to_string(nodesCount) + "-e" + std::to_string(edgesCount) + "-d" + std::to_string(density) + ".txt");
+                    "n" + std::to_string(nodesCount) + "-e" + std::to_string(edgesCount) + "-d" + std::to_string(
+                    density) + ".txt");
 
     for (auto &sourceNode : graph) {
         for (auto &targetNode : sourceNode.second) {
@@ -292,8 +444,11 @@ void writeGraph(int nodesCount, int edgesCount, std::map<string, std::vector<str
 }
 
 unsigned long getRandomNumber(unsigned long max, unsigned long min) {
+    return rand() % (max - min + 1) + min;
+}
+
+void setupRandomSeed() {
     struct timespec ts{};
     clock_gettime(CLOCK_MONOTONIC, &ts);
     srand(static_cast<unsigned int>((time_t) ts.tv_nsec));
-    return rand() % (max - min + 1) + min;
 }
